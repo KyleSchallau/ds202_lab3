@@ -1,0 +1,77 @@
+---
+title: "DS202_lab3"
+author: "Kyle Schallau"
+date: "10/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+dat <- readxl::read_xls('/Users/kyles/Documents/Classes/F21/DS_202/ds202_lab3/GSS.xls')
+
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+
+dat <- dat %>% rename(year = `Gss year for this respondent`, id_number = `Respondent id number`, 
+                      employee = `Govt or private employee`, marital_status = `Marital status`,
+                      education = `Highest year of school completed`, sex = `Respondents sex`, 
+                      party = `Political party affiliation`, happiness = `General happiness`, 
+                      ballot = `Ballot used for interview`)
+
+```
+
+1. Find the average years of education for the respondents with each marital status. Arrange your output in a meaningful order and print. Describe any patterns you find.
+
+Based on the below boxplot, the never married status seems to have the highest or second highest education level. There are a few outliers. Some people did not have any education.
+
+```{r}
+maritalDf <- filter(dat, education != 'No answer' & education != "Don't know" & education != "NA" & !is.na(education) & marital_status != 'No answer' & !is.na(marital_status))
+maritalDf$education <- as.numeric(maritalDf$education)
+ggplot(maritalDf, aes(y=education, x=marital_status), fill=education) + geom_boxplot() + xlab("Marital Status") + ylab("Education") + ggtitle("Marital Status vs. Education")
+```
+
+2. Create a single data frame containing records for the better educated respondents with each marital status. A “better educated” respondent is someone who has strictly more years of education than the average among those with the same marital status. Print the structure of the data frame.
+
+```{r}
+maritalDf <- filter(dat, education != "Don't know" & education != 'No answer' & education != "NA" & !is.na(education) & marital_status != 'No answer' & !is.na(marital_status))
+maritalDf$education <- as.numeric(maritalDf$education)
+maritalDf %>% group_by(marital_status) %>% summarize(meanRate = mean(education), numRows = n())
+```
+
+3. How is the happiness of a respondent related to his/her marriage status? Define that a person is happy if the response to question is “Very happy” or “Pretty happy”.
+
+Based on the below graph, the number of happy people is much higher than that of unhappy people. Married couples seem to be the happiest, with nearly 30,000 respondents being happy. Separated couples seem to be the least happy. Married couples also had the highest number of unhappy respondents, with separated having the least unhappy. There was far more married respondent than the others. There were also far fewer separated respondents than the rest of the marital statuses.
+
+```{r}
+happyDf <- dat %>% group_by(marital_status) %>% filter(happiness=="Very happy" | happiness=="Pretty happy") %>% filter(marital_status!="No answer")
+ggplot(happyDf, aes(x=marital_status)) + geom_bar() + ggtitle("Happiness vs Marital Status")+xlab("Marital Status")+ylab("Number Happy")
+
+notHappyDf <- dat %>% group_by(marital_status) %>% filter(happiness=="Not too happy") %>% filter(marital_status!="No answer")
+ggplot(notHappyDf, aes(x=marital_status)) + geom_bar() + ggtitle("Unhappiness vs Marital Status")+xlab("Marital Status")+ylab("Number Unhappy")
+```
+
+4. Does party affiliation affect the relationship you found in the last question?
+
+It is hard to determine if party affiliation affects the relationship between marital status and the number of happy vs. unhappy respondents. I would say that since marital status and political party are independent of each other, then there would not be a significant relationship. Independent near republic had the least happy and unhappy respondents. This is likely due to very few respondents being of this political party. Not Strong Republicans had way more happiness respondents than unhappiness respondents when compared to the other political parties.
+
+```{r}
+happyDf <- happyDf %>% group_by(marital_status) %>% filter(party=="Independent" | party=="Ind,near rep" | party=="Ind,near dem" | party=="Strong republican" | party=="Not str republican" | party=="Strong democrat" | party=="Not str democrat")
+ggplot(happyDf, aes(x=party)) + geom_bar() + ggtitle("Happy Political Parties") + xlab("Political Party") + ylab("Happy Count") + theme(axis.text.x = element_text(angle = 90, size = 12))
+
+notHappyDf <- notHappyDf %>% group_by(marital_status) %>% filter(party=="Independent" | party=="Ind,near rep" | party=="Ind,near dem" | party=="Strong republican" | party=="Not str republican" | party=="Strong democrat" | party=="Not str democrat")
+ggplot(notHappyDf, aes(x=party)) + geom_bar() + ggtitle("Not Happy Political Parties") + xlab("Political Party") + ylab("Not Happy Count") + theme(axis.text.x = element_text(angle = 90, size = 12))
+```
+
+5. Explore an interesting question (not covered by the previous questions), and answer the question using the GSS data.
+
+I wanted to verify whether gov't employees had a higher education level than private employees. Gov't employees have a higher average education level, but not as high as one might expect. The average gov't employee has only about 15 years of education, while the average private employee has around 13 years of education. I would have thought that a lot more gov't employees would have higher education levels.
+
+```{r}
+employeeDf <- filter(dat, education != 'No answer' & education != "Don't know" & education != "NA" & !is.na(education) & employee != "Not applicable" & employee != "No answer" & employee != "Don't know" & !is.na(employee))
+employeeDf$education <- as.numeric(employeeDf$education)
+ggplot(data = employeeDf, aes(x = employee, y = education)) + geom_boxplot() + ggtitle("Education vs Employee Type") + xlab("Employee Type") + ylab("Education")
+```
